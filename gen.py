@@ -10,7 +10,7 @@ def GetDispatchPath(disp: wincom.DispatchBaseClass) -> Path:
     ti = disp._oleobj_.GetTypeInfo()
     disp_clsid = ti.GetTypeAttr()[0]
     tlb, index = ti.GetContainingTypeLib()
-    clsid, lcid, major, minor, *_ = tlb.GetLibAttr()
+    clsid, lcid, _, major, minor, *_ = tlb.GetLibAttr()
 
     # Get the path of the generated file
     filename = wincom.gencache.GetGeneratedFileName(clsid, lcid, major, minor)
