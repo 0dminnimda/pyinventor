@@ -161,33 +161,22 @@ file = Path().cwd() / "Test5.ipt"
 document = PartDocument.open(inventor, file)
 
 sketch = Sketches3D.make(document)
-
 points = make_points(inventor, (0, 0, 0), (10, 0, 0), (10, 10, 1), (0, 10, 0))
 wire = make_wire(inventor, sketch, *points, loop=True)
+profile1 = Profile3D.make(sketch)  # regroup wires
 
-# Declare Profile3D to regroup wires
-profile1 = Profile3D.make(sketch)
-
-# Declare another sketch to be able to catch 2 differents profiles
 sketch2 = Sketches3D.make(document)
-
 points = make_points(inventor, (0, 0, 5), (10, 0, 5), (10, 10, 5), (0, 10, 5))
 wire = make_wire(inventor, sketch2, *points, loop=True)
-
-# Declare second Profile3D to regroup wires
 profile2 = Profile3D.make(sketch2)
 
-# Create object collection need by Inventor functions
-collection = ObjectCollection.make(inventor)
-
 # Add profiles to collection
+collection = ObjectCollection.make(inventor)
 collection.Add(profile1)
 collection.Add(profile2)
 
-# Create loft definition needed by Loft function
+# Create loft definition and loft itself
 loft_def = LoftDefinition.make(document, collection, const.kSurfaceOperation)
-
-# Creating loft
 loft_feat = LoftFeature.make(document, loft_def)
 
 # view = document.Views(1)
