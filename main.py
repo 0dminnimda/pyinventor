@@ -1,8 +1,31 @@
-from pathlib import Path
-import win32com.client as wincom
+from __future__ import annotations
+
 from enum import Enum
-# from dataclasses import dataclass
+from pathlib import Path
 from typing import Any, Protocol
+
+import win32com.client as wincom
+
+from com import constants as const
+from com.Application import Application as COM_Application
+from com.Document import Document as COM_Document
+from com.DrawingDocument import DrawingDocument as COM_DrawingDocument
+from com.LoftDefinition import LoftDefinition as COM_LoftDefinition
+from com.LoftFeature import LoftFeature as COM_LoftFeature
+from com.ObjectCollection import ObjectCollection as COM_ObjectCollection
+from com.PartDocument import PartDocument as COM_PartDocument
+from com.Point import Point as COM_Point
+from com.Profile3D import Profile3D as COM_Profile3D
+from com.Sketches3D import Sketches3D as COM_Sketches3D
+
+
+def set_genpath(path: str):
+    import win32com
+
+    win32com.__gen_path__ = str(path)
+
+
+set_genpath("com")
 
 
 def cast_to(obj, type) -> Any:
@@ -10,82 +33,112 @@ def cast_to(obj, type) -> Any:
 
 
 Dispatch = wincom.DispatchBaseClass
-const = wincom.constants
 
 
-class Document(Protocol):
+class COM_Base:
+    @classmethod
+    def self_cast(cls, obj):
+        return cast_to(obj, cls.__name__)
+
+
+class DocumentBase(COM_Base):
     DocumentType: int
-    # ActiveSheet
+
+    @classmethod
+    def open(cls, inventor: Inventor, file: Path):
+        if not file.exists():
+            document = inventor.Documents.Add(cls.DocumentType, CreateVisible=False)
+            document.SaveAs(str(file), SaveCopyAs=True)
+        document = inventor.Documents.Open(str(file))
+        return cls.self_cast(document)
+
+
+# SEE: https://adndevblog.typepad.com/manufacturing/2013/01/inventor-document-sub-types.html
+
+
+class Document(COM_Document, DocumentBase):
+    DocumentType: int
+
+
+class PartDocument(COM_PartDocument, DocumentBase):
+    DocumentType: int = const.kPartDocumentObject
+    ComponentDefinition: Any
+
+
+class DrawingDocument(COM_DrawingDocument, DocumentBase):
+    DocumentType: int = const.kDrawingDocumentObject
+    ActiveSheet: Any
 
 
 # app: Dispatch  # or wincom.CDispatch for wincom.
 
-class Inventor(Protocol):
+
+class Inventor(COM_Application, COM_Base):
     Visible: bool
     Caption: str
     Documents: Any
     ActiveDocument: Document
 
-    def Quit(self) -> None:
-        ...
+    @classmethod
+    def make(cls, visible: bool = False) -> Inventor:
+        inventor: Inventor = wincom.gencache.EnsureDispatch("Inventor.Application")
+        inventor.Visible = visible
+        return inventor
 
 
-# SEE: https://adndevblog.typepad.com/manufacturing/2013/01/inventor-document-sub-types.html
-
-class DocumentType(Enum):
-    Part = 12290  # .ipt
-    Assembly = 12291  # .iam
-    Drawing = 12292  # .dwg, .idw
-    Sceme = 12293  # .ipn (Presentation?)
-    Unknown = 12298 # (Invalid?)
-    # .ipn - ?
+class Sketches3D(COM_Sketches3D, COM_Base):
+    @classmethod
+    def make(cls, document: PartDocument):
+        return cls.self_cast(document.ComponentDefinition.Sketches3D.Add())
 
 
-def _find_document_types(inventor: Inventor, prev: int = 0):
-    # _prev = 875207
-    import pywintypes
-    for i in range(prev, 10**10):
-        try:
-                document = inventor.Documents.Add(i)
-        except pywintypes.com_error:
-                continue
-        print(i, getattr(document, "DocumentType", None))
-        document.Close(SkipSave=True)
+class Profile3D(COM_Profile3D, COM_Base):
+    @classmethod
+    def make(cls, sketch3D: Sketches3D):
+        return cls.self_cast(sketch3D.Profiles3D.AddOpen.Add())
 
 
-def start_inventor(visible: bool = False) -> Inventor:
-    inventor: Inventor = wincom.gencache.EnsureDispatch("Inventor.Application")
-    inventor.Visible = visible
-    return inventor
-
-
-def open_document(inventor: Inventor, file: Path, type: DocumentType) -> Document:
-    if not file.exists():
-        document = inventor.Documents.Add(type.value, CreateVisible=False)
-        document.SaveAs(str(file), SaveCopyAs=True)
-    document = inventor.Documents.Open(str(file))
-    return cast_to(document, type.name + "Document")
-
-
-def add_Sketch3D(document):
-    return cast_to(document.ComponentDefinition.Sketches3D.Add(), "Sketch3D")
-
-def add_Profile3D(sketch3D):
-    return cast_to(sketch3D.Profiles3D.AddOpen(), "Profile3D")
-
-def make_point(inventor: Inventor, x: int, y: int, z: int):
-    return inventor.TransientGeometry.CreatePoint(x, y, z)
+class Point(COM_Point, COM_Base):
+    @classmethod
+    def make(cls, inventor: Inventor, x: int, y: int, z: int):
+        return inventor.TransientGeometry.CreatePoint(x, y, z)
 
 
 def make_points(inventor: Inventor, *points: tuple[int, int, int]):
-    return [make_point(inventor, *point) for point in points]
+    return [Point.make(inventor, *point) for point in points]
 
 
-def make_wire(inventor: Inventor, sketch3D, *points):
+def make_wire(inventor: Inventor, sketch3D, *points, loop: bool = False):
     return [
         sketch3D.SketchLines3D.AddByTwoPoints(point1, point2)  # SketchLine3D
         for point1, point2 in zip(points, points[1:])
-    ]
+    ] + [sketch3D.SketchLines3D.AddByTwoPoints(points[-1], points[0])] * int(loop)
+
+
+class ObjectCollection(COM_ObjectCollection, COM_Base):
+    @classmethod
+    def make(cls, inventor: Inventor):
+        return cls.self_cast(inventor.TransientObjects.CreateObjectCollection())
+
+
+class LoftDefinition(COM_LoftDefinition, COM_Base):
+    @classmethod
+    def make(
+        cls, document: PartDocument, section, operation: int = const.kSurfaceOperation
+    ):
+        return cls.self_cast(
+            document.ComponentDefinition.Features.LoftFeatures.CreateLoftDefinition(
+                section, operation
+            )
+        )
+
+
+class LoftFeature(COM_LoftFeature, COM_Base):
+    @classmethod
+    def make(cls, document: PartDocument, definition: LoftDefinition):
+        return cls.self_cast(
+            document.ComponentDefinition.Features.LoftFeatures.Add(definition)
+        )
 
 
 """
@@ -101,41 +154,41 @@ if inventorVersion.Major > templateVersion.Major Then
 doc = inventor.Documents.Add(kDrawingDocumentObject, templatePath, CreateVisible=True)
 """
 
-inventor = start_inventor(visible=True)
+inventor = Inventor.make(visible=True)
 print(f"Running {inventor.Caption}")
 
 file = Path().cwd() / "Test5.ipt"
-document = open_document(inventor, file, DocumentType.Part)
+document = PartDocument.open(inventor, file)
 
-sketch = add_Sketch3D(document)
+sketch = Sketches3D.make(document)
 
-points = make_points(inventor, (0, 0, 0), (10, 0, 0), (10, 10, 1), (0, 10, 0), (0, 0, 0))
-wire = make_wire(inventor, sketch, *points)
+points = make_points(inventor, (0, 0, 0), (10, 0, 0), (10, 10, 1), (0, 10, 0))
+wire = make_wire(inventor, sketch, *points, loop=True)
 
 # Declare Profile3D to regroup wires
-profile1 = add_Profile3D(sketch)
+profile1 = Profile3D.make(sketch)
 
 # Declare another sketch to be able to catch 2 differents profiles
-sketch2 = add_Sketch3D(document)
+sketch2 = Sketches3D.make(document)
 
-points = make_points(inventor, (0, 0, 5), (10, 0, 5), (10, 10, 5), (0, 10, 5), (0, 0, 5))
-wire = make_wire(inventor, sketch2, *points)
+points = make_points(inventor, (0, 0, 5), (10, 0, 5), (10, 10, 5), (0, 10, 5))
+wire = make_wire(inventor, sketch2, *points, loop=True)
 
 # Declare second Profile3D to regroup wires
-profile2 = add_Profile3D(sketch2)
+profile2 = Profile3D.make(sketch2)
 
 # Create object collection need by Inventor functions
-collection = cast_to(inventor.TransientObjects.CreateObjectCollection(), "ObjectCollection")
+collection = ObjectCollection.make(inventor)
 
 # Add profiles to collection
 collection.Add(profile1)
 collection.Add(profile2)
 
 # Create loft definition needed by Loft function
-loft_def = cast_to(document.ComponentDefinition.Features.LoftFeatures.CreateLoftDefinition(collection, const.kSurfaceOperation), "LoftDefinition")
+loft_def = LoftDefinition.make(document, collection, const.kSurfaceOperation)
 
-# Creating loft.
-loft_feat = cast_to(document.ComponentDefinition.Features.LoftFeatures.Add(loft_def), "LoftFeature")
+# Creating loft
+loft_feat = LoftFeature.make(document, loft_def)
 
 # view = document.Views(1)
 
