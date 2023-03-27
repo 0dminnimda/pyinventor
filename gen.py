@@ -29,26 +29,26 @@ META = "metafile.txt"
 
 
 def GetStoredMtime(directory: Path) -> float:
-    metafile = destination / META
+    metafile = directory / META
     if metafile.exists():
         return float(metafile.read_text())
     return -1.
 
 
 def SetStoredMtime(directory: Path, mtime: float) -> None:
-    metafile = destination / META
+    metafile = directory / META
     metafile.write_text(str(mtime))
 
 
 def DispatchToDirectory(name: str, directory: Path, force: bool = False) -> wincom.DispatchBaseClass:
     disp = wincom.gencache.EnsureDispatch(name)
     source = GetDispatchPath(disp)
+    destination = Path(directory)
 
     mtime = source.stat().st_mtime
     if not force and mtime == GetStoredMtime(destination):
         return disp
 
-    destination = Path(directory)
     if destination.exists():
         shutil.rmtree(destination)
 
