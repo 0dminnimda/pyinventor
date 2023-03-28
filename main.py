@@ -16,7 +16,7 @@ from com.ObjectCollection import ObjectCollection as COM_ObjectCollection
 from com.PartDocument import PartDocument as COM_PartDocument
 from com.Point import Point as COM_Point
 from com.Profile3D import Profile3D as COM_Profile3D
-from com.Sketches3D import Sketches3D as COM_Sketches3D
+from com.Sketch3D import Sketch3D as COM_Sketch3D
 
 
 def cast_to(obj, type) -> Any:
@@ -77,7 +77,7 @@ class Inventor(COM_Application, COM_Base):
         return inventor
 
 
-class Sketches3D(COM_Sketches3D, COM_Base):
+class Sketch3D(COM_Sketch3D, COM_Base):
     @classmethod
     def make(cls, document: PartDocument):
         return cls.self_cast(document.ComponentDefinition.Sketches3D.Add())
@@ -86,7 +86,7 @@ class Sketches3D(COM_Sketches3D, COM_Base):
 class Profile3D(COM_Profile3D, COM_Base):
     @classmethod
     def make(cls, sketch3D: Sketches3D):
-        return cls.self_cast(sketch3D.Profiles3D.AddOpen.Add())
+        return cls.self_cast(sketch3D.Profiles3D.AddOpen())
 
 
 class Point(COM_Point, COM_Base):
@@ -151,12 +151,12 @@ print(f"Running {inventor.Caption}")
 file = Path().cwd() / "Test5.ipt"
 document = PartDocument.open(inventor, file)
 
-sketch = Sketches3D.make(document)
+sketch = Sketch3D.make(document)
 points = make_points(inventor, (0, 0, 0), (10, 0, 0), (10, 10, 1), (0, 10, 0))
 wire = make_wire(inventor, sketch, *points, loop=True)
 profile1 = Profile3D.make(sketch)  # regroup wires
 
-sketch2 = Sketches3D.make(document)
+sketch2 = Sketch3D.make(document)
 points = make_points(inventor, (0, 0, 5), (10, 0, 5), (10, 10, 5), (0, 10, 5))
 wire = make_wire(inventor, sketch2, *points, loop=True)
 profile2 = Profile3D.make(sketch2)
