@@ -167,7 +167,7 @@ collection.Add(profile1)
 collection.Add(profile2)
 
 # Create loft definition and loft itself
-loft_def = LoftDefinition.make(document, collection, const.kSurfaceOperation)
+loft_def = LoftDefinition.make(document, collection, const.kNewBodyOperation)  # const.kSurfaceOperation)
 loft_feat = LoftFeature.make(document, loft_def)
 
 # view = document.Views(1)
@@ -194,7 +194,9 @@ InvVBAProcedureToRun.Execute
 
 document.Update()
 document.Save()
-document.Close(SkipSave=True)
+
+if 0:
+    document.Close(SkipSave=True)
 
 if 0:
     inventor.Quit()
