@@ -4,7 +4,7 @@ from enum import Enum
 from pathlib import Path
 from typing import Any, Protocol
 
-import win32com.client as wincom
+from wincom import wincom
 
 from com import constants as const
 from com.Application import Application as COM_Application
@@ -17,15 +17,6 @@ from com.PartDocument import PartDocument as COM_PartDocument
 from com.Point import Point as COM_Point
 from com.Profile3D import Profile3D as COM_Profile3D
 from com.Sketches3D import Sketches3D as COM_Sketches3D
-
-
-def set_genpath(path: str):
-    import win32com
-
-    win32com.__gen_path__ = str(path)
-
-
-set_genpath("com")
 
 
 def cast_to(obj, type) -> Any:

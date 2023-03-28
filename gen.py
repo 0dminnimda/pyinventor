@@ -1,5 +1,4 @@
-import win32com
-import win32com.client as wincom
+from wincom import gen_path, wincom
 import os
 import shutil
 from pathlib import Path
@@ -14,7 +13,7 @@ def GetDispatchPath(disp: wincom.DispatchBaseClass) -> Path:
 
     # Get the path of the generated file
     filename = wincom.gencache.GetGeneratedFileName(clsid, lcid, major, minor)
-    return Path(win32com.__gen_path__) / filename
+    return Path(gen_path) / filename
 
 
 # def GenerateToDirectory(name: str, directory: Path) -> wincom.DispatchBaseClass:
