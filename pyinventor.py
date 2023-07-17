@@ -36,6 +36,7 @@ class COM_Base:
 
 class DocumentBase(COM_Base):
     DocumentType: int
+    extention: str
 
     @classmethod
     def open(cls, inventor: Inventor, file: Path):
@@ -56,11 +57,13 @@ class Document(COM_Document, DocumentBase):
 class PartDocument(COM_PartDocument, DocumentBase):
     DocumentType: int = const.kPartDocumentObject
     ComponentDefinition: Any
+    extention: str = ".ipt"
 
 
 class DrawingDocument(COM_DrawingDocument, DocumentBase):
     DocumentType: int = const.kDrawingDocumentObject
     ActiveSheet: Any
+    extention: str = ".idw"
 
 
 # app: Dispatch  # or wincom.CDispatch for wincom.

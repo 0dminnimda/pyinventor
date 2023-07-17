@@ -17,6 +17,7 @@ from pyinventor import (
     make_points,
     make_wire,
     cast_to,
+    add_image,
 )
 
 """
@@ -35,7 +36,7 @@ doc = inventor.Documents.Add(kDrawingDocumentObject, templatePath, CreateVisible
 inventor = Inventor.make(visible=True)
 print(f"Running {inventor.Caption}")
 
-file = Path().cwd() / "Test5.ipt"
+file = Path().cwd() / ("Test5" + PartDocument.extention)
 document = PartDocument.open(inventor, file)
 
 
