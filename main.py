@@ -5,12 +5,18 @@ from pyinventor import (
     LoftDefinition,
     LoftFeature,
     ObjectCollection,
+    Document,
     PartDocument,
+    SketchImage,
+    WorkPlane,
     Profile3D,
     Sketch3D,
+    Sketch,
+    Point2d,
     const,
     make_points,
     make_wire,
+    cast_to,
 )
 
 """
@@ -31,6 +37,13 @@ print(f"Running {inventor.Caption}")
 
 file = Path().cwd() / "Test5.ipt"
 document = PartDocument.open(inventor, file)
+
+
+plane = WorkPlane.XY(document)
+sketch = Sketch.make(document, plane)
+image = SketchImage.make(sketch, "D:\Aftodesk\pyinventor\sampe.png", Point2d.make(inventor, 0, 0))
+image.Name = "Image"
+
 
 sketch = Sketch3D.make(document)
 points = make_points(inventor, (0, 0, 0), (10, 0, 0), (10, 10, 1), (0, 10, 0))
