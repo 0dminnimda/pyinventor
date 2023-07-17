@@ -85,7 +85,7 @@ class Sketch3D(COM_Sketch3D, COM_Base):
 
 class Profile3D(COM_Profile3D, COM_Base):
     @classmethod
-    def make(cls, sketch3D: Sketches3D):
+    def make(cls, sketch3D: Sketch3D):
         return cls.self_cast(sketch3D.Profiles3D.AddOpen())
 
 
