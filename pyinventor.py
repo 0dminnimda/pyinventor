@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from enum import Enum
 from pathlib import Path
-from typing import Any, Protocol
+from typing import Any, Protocol, Union
 
 from wincom import wincom
 
@@ -169,15 +169,21 @@ class LoftFeature(COM_LoftFeature, COM_Base):
         )
 
 
-def add_image(document: Document):
-    """Add an image to the document"""
+class ReferencedOLEFileDescriptor(COM_Base):
+    @classmethod
+    def make(cls, document: PartDocument, path: Union[str, Path], ole_document_type: int = const.kOLEDocumentEmbeddingObject):
+        return cls.self_cast(
+            document.ReferencedOLEFileDescriptors.Add(path, ole_document_type)
+        )
 
-    file_name = "sampe.png"
-    image_path = Path(__file__).parent.parent / file_name
 
-    oleReference = document.ReferencedOLEFileDescriptors.Add(image_path, const.kOLEDocumentEmbeddingObject)
-    oleReference = cast_to(oleReference, "ReferencedOLEFileDescriptor")
+def add_file(document: Document, path: Path) -> ReferencedOLEFileDescriptor:
+    """Add an (multimedia?) file to the document"""
+
+    oleReference = ReferencedOLEFileDescriptor.make(document, path)
 
     oleReference.BrowserVisible = True
     # oleReference.Visible = True
-    oleReference.DisplayName = file_name
+    oleReference.DisplayName = path.stem
+
+    return oleReference

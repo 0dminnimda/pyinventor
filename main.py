@@ -18,7 +18,7 @@ from pyinventor import (
     make_points,
     make_wire,
     cast_to,
-    add_image,
+    add_file,
 )
 
 """
@@ -37,10 +37,12 @@ doc = inventor.Documents.Add(kDrawingDocumentObject, templatePath, CreateVisible
 inventor = Inventor.make(visible=True)
 print(f"Running {inventor.Caption}")
 
+image_path = Path(__file__).parent / "sample.png"
+
 file = Path().cwd() / ("TestDrawing" + DrawingDocument.extention)
 document = DrawingDocument.open(inventor, file)
 
-add_image(document)
+add_file(document, image_path)
 
 file = Path().cwd() / ("TestPart" + PartDocument.extention)
 document = PartDocument.open(inventor, file)
@@ -48,7 +50,7 @@ document = PartDocument.open(inventor, file)
 
 plane = WorkPlane.XY(document)
 sketch = Sketch.make(document, plane)
-image = SketchImage.make(sketch, "D:\Aftodesk\pyinventor\sampe.png", Point2d.make(inventor, 0, 0))
+image = SketchImage.make(sketch, str(image_path), Point2d.make(inventor, 0, 0))
 image.Name = "Image"
 
 
