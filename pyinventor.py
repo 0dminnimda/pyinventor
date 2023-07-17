@@ -1,3 +1,5 @@
+# TODO: https://ru.wikibooks.org/wiki/Autodesk_Inventor_API._Первые_шаги/2D_эскиз
+
 from __future__ import annotations
 
 from enum import Enum
