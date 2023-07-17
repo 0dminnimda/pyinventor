@@ -101,7 +101,7 @@ class Sketch(COM_Base):
 
 class SketchImage(COM_Base):
     @classmethod
-    def make(cls, sketch: Sketch, path: str, point: Point2d, link: bool = True):
+    def make(cls, sketch: Sketch, path: str, point: Point2d, link: bool = False):
         return cls.self_cast(sketch.SketchImages.Add(path, point, link))
 
 
