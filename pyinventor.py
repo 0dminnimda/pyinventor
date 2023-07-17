@@ -77,6 +77,32 @@ class Inventor(COM_Application, COM_Base):
         return inventor
 
 
+class WorkPlane(COM_Base):
+    @classmethod
+    def YZ(cls, document: PartDocument):
+        return cls.self_cast(document.ComponentDefinition.WorkPlanes.Item(1))
+
+    @classmethod
+    def XZ(cls, document: PartDocument):
+        return cls.self_cast(document.ComponentDefinition.WorkPlanes.Item(2))
+
+    @classmethod
+    def XY(cls, document: PartDocument):
+        return cls.self_cast(document.ComponentDefinition.WorkPlanes.Item(3))
+
+
+class Sketch(COM_Base):
+    @classmethod
+    def make(cls, document: PartDocument, plane: WorkPlane):
+        return cls.self_cast(document.ComponentDefinition.Sketches.Add(plane))
+
+
+class SketchImage(COM_Base):
+    @classmethod
+    def make(cls, sketch: Sketch, path: str, point: Point2d, link: bool = True):
+        return cls.self_cast(sketch.SketchImages.Add(path, point, link))
+
+
 class Sketch3D(COM_Sketch3D, COM_Base):
     @classmethod
     def make(cls, document: PartDocument):
@@ -87,6 +113,12 @@ class Profile3D(COM_Profile3D, COM_Base):
     @classmethod
     def make(cls, sketch3D: Sketch3D):
         return cls.self_cast(sketch3D.Profiles3D.AddOpen())
+
+
+class Point2d(COM_Base):
+    @classmethod
+    def make(cls, inventor: Inventor, x: int, y: int):
+        return inventor.TransientGeometry.CreatePoint2d(x, y)
 
 
 class Point(COM_Point, COM_Base):
