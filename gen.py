@@ -58,3 +58,38 @@ def DispatchToDirectory(name: str, directory: Path, force: bool = False) -> winc
 if __name__ == "__main__":
     directory = Path(__file__).parent / "com"
     DispatchToDirectory("Inventor.Application", directory)
+
+
+# TODO: find out a reason
+# If encountering an issue like this:
+"""
+Traceback (most recent call last):
+  File "D:\Aftodesk\pyinventor\pyinventor\gen.py", line 60, in <module>
+    DispatchToDirectory("Inventor.Application", directory)
+  File "D:\Aftodesk\pyinventor\pyinventor\gen.py", line 43, in DispatchToDirectory
+    disp = wincom.gencache.EnsureDispatch(name)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\User\AppData\Roaming\Python\Python311\site-packages\win32com\client\gencache.py", line 628, in EnsureDispatch
+    mod = EnsureModule(tla[0], tla[1], tla[3], tla[4], bForDemand=bForDemand)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\User\AppData\Roaming\Python\Python311\site-packages\win32com\client\gencache.py", line 601, in EnsureModule
+             ^^^^^^^^^^^^^^^^^^^^^
+    makepy.GenerateFromTypeLibSpec(
+  File "C:\Users\User\AppData\Roaming\Python\Python311\site-packages\win32com\client\makepy.py", line 338, in GenerateFromTypeLibSpec
+    gencache.AddModuleToCache(info.clsid, info.lcid, info.major, info.minor)
+  File "C:\Users\User\AppData\Roaming\Python\Python311\site-packages\win32com\client\gencache.py", line 647, in AddModuleToCache
+    mod = _GetModule(fname)
+          ^^^^^^^^^^^^^^^^^
+  File "C:\Users\User\AppData\Roaming\Python\Python311\site-packages\win32com\client\gencache.py", line 726, in _GetModule
+    mod = __import__(mod_name)
+          ^^^^^^^^^^^^^^^^^^^^
+ModuleNotFoundError: No module named 'win32com.gen_py.D98A091D-3A0F-4C3E-B36E-61F62068D488x0x1x0'
+"""
+
+# Try this:
+"""
+$ python -m win32com.client.makepy -i "Inventor.Application"
+$ python
+>>> from win32com.client import gencache
+>>> gencache.EnsureModule('{D98A091D-3A0F-4C3E-B36E-61F62068D488}', 0, 1, 0)
+"""
