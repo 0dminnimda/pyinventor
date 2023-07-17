@@ -162,3 +162,17 @@ class LoftFeature(COM_LoftFeature, COM_Base):
         return cls.self_cast(
             document.ComponentDefinition.Features.LoftFeatures.Add(definition)
         )
+
+
+def add_image(document: Document):
+    """Add an image to the document"""
+
+    file_name = "sampe.png"
+    image_path = Path(__file__).parent.parent / file_name
+
+    oleReference = document.ReferencedOLEFileDescriptors.Add(image_path, const.kOLEDocumentEmbeddingObject)
+    oleReference = cast_to(oleReference, "ReferencedOLEFileDescriptor")
+
+    oleReference.BrowserVisible = True
+    # oleReference.Visible = True
+    oleReference.DisplayName = file_name
