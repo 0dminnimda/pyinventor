@@ -6,6 +6,7 @@ from pyinventor import (
     LoftFeature,
     ObjectCollection,
     Document,
+    DrawingDocument,
     PartDocument,
     SketchImage,
     WorkPlane,
@@ -36,7 +37,12 @@ doc = inventor.Documents.Add(kDrawingDocumentObject, templatePath, CreateVisible
 inventor = Inventor.make(visible=True)
 print(f"Running {inventor.Caption}")
 
-file = Path().cwd() / ("Test5" + PartDocument.extention)
+file = Path().cwd() / ("TestDrawing" + DrawingDocument.extention)
+document = DrawingDocument.open(inventor, file)
+
+add_image(document)
+
+file = Path().cwd() / ("TestPart" + PartDocument.extention)
 document = PartDocument.open(inventor, file)
 
 
