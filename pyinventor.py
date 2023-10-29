@@ -12,7 +12,7 @@ import com
 from com import constants as const
 
 
-def cast_to(obj, tp) -> Any:
+def cast_to(obj, tp: str | type) -> Any:
     if isinstance(tp, type):
         tp = tp.__name__
     return wincom.CastTo(obj, tp)
