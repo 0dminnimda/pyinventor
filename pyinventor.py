@@ -6,19 +6,10 @@ from enum import Enum
 from pathlib import Path
 from typing import Any, Protocol, Union
 
-from wincom import wincom
+import win32com.client as wincom
 
+import com
 from com import constants as const
-from com.Application import Application as COM_Application
-from com.Document import Document as COM_Document
-from com.DrawingDocument import DrawingDocument as COM_DrawingDocument
-from com.LoftDefinition import LoftDefinition as COM_LoftDefinition
-from com.LoftFeature import LoftFeature as COM_LoftFeature
-from com.ObjectCollection import ObjectCollection as COM_ObjectCollection
-from com.PartDocument import PartDocument as COM_PartDocument
-from com.Point import Point as COM_Point
-from com.Profile3D import Profile3D as COM_Profile3D
-from com.Sketch3D import Sketch3D as COM_Sketch3D
 
 
 def cast_to(obj, type) -> Any:
@@ -28,13 +19,13 @@ def cast_to(obj, type) -> Any:
 Dispatch = wincom.DispatchBaseClass
 
 
-class COM_Base:
+class COMBase:
     @classmethod
     def self_cast(cls, obj):
         return cast_to(obj, cls.__name__)
 
 
-class DocumentBase(COM_Base):
+class DocumentBase(COMBase):
     DocumentType: int
     extention: str
 
@@ -50,17 +41,17 @@ class DocumentBase(COM_Base):
 # SEE: https://adndevblog.typepad.com/manufacturing/2013/01/inventor-document-sub-types.html
 
 
-class Document(COM_Document, DocumentBase):
+class Document(com.Document, DocumentBase):
     DocumentType: int
 
 
-class PartDocument(COM_PartDocument, DocumentBase):
+class PartDocument(com.PartDocument, DocumentBase):
     DocumentType: int = const.kPartDocumentObject
     ComponentDefinition: Any
     extention: str = ".ipt"
 
 
-class DrawingDocument(COM_DrawingDocument, DocumentBase):
+class DrawingDocument(com.DrawingDocument, DocumentBase):
     DocumentType: int = const.kDrawingDocumentObject
     ActiveSheet: Any
     extention: str = ".idw"
@@ -69,7 +60,7 @@ class DrawingDocument(COM_DrawingDocument, DocumentBase):
 # app: Dispatch  # or wincom.CDispatch for wincom.
 
 
-class Inventor(COM_Application, COM_Base):
+class Inventor(com.Application, COMBase):
     Visible: bool
     Caption: str
     Documents: Any
@@ -77,12 +68,12 @@ class Inventor(COM_Application, COM_Base):
 
     @classmethod
     def make(cls, visible: bool = False) -> Inventor:
-        inventor: Inventor = wincom.gencache.EnsureDispatch("Inventor.Application")
+        inventor = Inventor(wincom.Dispatch("Inventor.Application"))
         inventor.Visible = visible
         return inventor
 
 
-class WorkPlane(COM_Base):
+class WorkPlane(COMBase):
     @classmethod
     def YZ(cls, document: PartDocument):
         return cls.self_cast(document.ComponentDefinition.WorkPlanes.Item(1))
@@ -96,37 +87,37 @@ class WorkPlane(COM_Base):
         return cls.self_cast(document.ComponentDefinition.WorkPlanes.Item(3))
 
 
-class Sketch(COM_Base):
+class Sketch(COMBase):
     @classmethod
     def make(cls, document: PartDocument, plane: WorkPlane):
         return cls.self_cast(document.ComponentDefinition.Sketches.Add(plane))
 
 
-class SketchImage(COM_Base):
+class SketchImage(COMBase):
     @classmethod
     def make(cls, sketch: Sketch, path: str, point: Point2d, link: bool = False):
         return cls.self_cast(sketch.SketchImages.Add(path, point, link))
 
 
-class Sketch3D(COM_Sketch3D, COM_Base):
+class Sketch3D(com.Sketch3D, COMBase):
     @classmethod
     def make(cls, document: PartDocument):
         return cls.self_cast(document.ComponentDefinition.Sketches3D.Add())
 
 
-class Profile3D(COM_Profile3D, COM_Base):
+class Profile3D(com.Profile3D, COMBase):
     @classmethod
     def make(cls, sketch3D: Sketch3D):
         return cls.self_cast(sketch3D.Profiles3D.AddOpen())
 
 
-class Point2d(COM_Base):
+class Point2d(COMBase):
     @classmethod
     def make(cls, inventor: Inventor, x: int, y: int):
         return inventor.TransientGeometry.CreatePoint2d(x, y)
 
 
-class Point(COM_Point, COM_Base):
+class Point(com.Point, COMBase):
     @classmethod
     def make(cls, inventor: Inventor, x: int, y: int, z: int):
         return inventor.TransientGeometry.CreatePoint(x, y, z)
@@ -143,13 +134,13 @@ def make_wire(inventor: Inventor, sketch3D, *points, loop: bool = False):
     ] + [sketch3D.SketchLines3D.AddByTwoPoints(points[-1], points[0])] * int(loop)
 
 
-class ObjectCollection(COM_ObjectCollection, COM_Base):
+class ObjectCollection(com.ObjectCollection, COMBase):
     @classmethod
     def make(cls, inventor: Inventor):
         return cls.self_cast(inventor.TransientObjects.CreateObjectCollection())
 
 
-class LoftDefinition(COM_LoftDefinition, COM_Base):
+class LoftDefinition(com.LoftDefinition, COMBase):
     @classmethod
     def make(
         cls, document: PartDocument, section, operation: int = const.kSurfaceOperation
@@ -161,7 +152,7 @@ class LoftDefinition(COM_LoftDefinition, COM_Base):
         )
 
 
-class LoftFeature(COM_LoftFeature, COM_Base):
+class LoftFeature(com.LoftFeature, COMBase):
     @classmethod
     def make(cls, document: PartDocument, definition: LoftDefinition):
         return cls.self_cast(
@@ -169,7 +160,7 @@ class LoftFeature(COM_LoftFeature, COM_Base):
         )
 
 
-class ReferencedOLEFileDescriptor(COM_Base):
+class ReferencedOLEFileDescriptor(COMBase):
     @classmethod
     def make(cls, document: PartDocument, path: Union[str, Path], ole_document_type: int = const.kOLEDocumentEmbeddingObject):
         return cls.self_cast(

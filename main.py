@@ -51,8 +51,7 @@ document = PartDocument.open(inventor, file)
 plane = WorkPlane.XY(document)
 sketch = Sketch.make(document, plane)
 image = SketchImage.make(sketch, str(image_path), Point2d.make(inventor, 0, 0))
-image.Name = "Image"
-
+# image.Name = "Image"
 
 sketch = Sketch3D.make(document)
 points = make_points(inventor, (0, 0, 0), (10, 0, 0), (10, 10, 1), (0, 10, 0))
