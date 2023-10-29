@@ -12,8 +12,10 @@ import com
 from com import constants as const
 
 
-def cast_to(obj, type) -> Any:
-    return wincom.CastTo(obj, type)
+def cast_to(obj, tp) -> Any:
+    if isinstance(tp, type):
+        tp = tp.__name__
+    return wincom.CastTo(obj, tp)
 
 
 Dispatch = wincom.DispatchBaseClass
