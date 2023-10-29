@@ -1,4 +1,5 @@
 from pathlib import Path
+from dataclasses import dataclass, field
 
 from pyinventor import (
     Inventor,
@@ -24,94 +25,130 @@ from pyinventor import (
 )
 
 
-def tight_bounding_box(body: com.SurfaceBody, tolerance_in_cm: float = 0) -> com.Box:
-    # inspired by https://modthemachine.typepad.com/my_weblog/2017/06/getting-the-overall-size-of-parts.html
-    """
-    Calculates a tight bounding box around the input body.
-    An optional tolerance argument is available.
-    If not provided the best existing display mesh is used.
-    """
+BodySize = tuple[float, float, float]
 
-    # If the tolerance is zero, use the best display mesh available
-    if tolerance_in_cm <= 0:
-        # Get the best display mesh available
-        _, tols = body.GetExistingFacetTolerances()
-        best_tol = min(tols)
-        vert_count, facet_count, vert_coords, norm_vectors, vert_inds = body.GetExistingFacets(best_tol)
-    else:
-        # Calculate a new mesh based on the input tolerance
-        vert_count, facet_count, vert_coords, norm_vectors, vert_inds = body.CalculateFacets(tolerance_in_cm)
 
-    tg = body.Application.TransientGeometry
+def get_body_size(body: com.SurfaceBody) -> BodySize:
+    bounding_box: com.OrientedBox = body.OrientedMinimumRangeBox
 
-    # Calculate the range of the mesh
-    small_pnt = tg.CreatePoint(vert_coords[0], vert_coords[1], vert_coords[2])
-    large_pnt = tg.CreatePoint(vert_coords[0], vert_coords[1], vert_coords[2])
+    return tuple(sorted(
+        [
+            round(bounding_box.DirectionOne.Length, 3),
+            round(bounding_box.DirectionTwo.Length, 3),
+            round(bounding_box.DirectionThree.Length, 3),
+        ],
+        reverse=True,
+    ))
 
-    for i in range(vert_count):
-        vert_X = vert_coords[i * 3]
-        vert_Y = vert_coords[i * 3 + 1]
-        vert_Z = vert_coords[i * 3 + 2]
 
-        if vert_X < small_pnt.X:
-            small_pnt.X = vert_X
+class PartVisitor:
+    def visit(self, obj):
+        if obj.DocumentType == const.kAssemblyDocumentObject:
+            self.visit_AssemblyDocument(obj)
+        elif obj.DocumentType == const.kPartDocumentObject:
+            self.visit_PartDocument(obj)
+        else:
+            raise Exception(f"Unsupported document type {obj.File.FullFileName}")
 
-        if vert_Y < small_pnt.Y:
-            small_pnt.Y = vert_Y
+    def visit_AssemblyDocument(self, obj):
+        document = cast_to(obj, com.AssemblyDocument)
 
-        if vert_Z < small_pnt.Z:
-            small_pnt.Z = vert_Z
+        referenced = document.ReferencedDocuments
+        for i in range(1, referenced.Count + 1):
+            self.visit(referenced.Item(i))
 
-        if vert_X > large_pnt.X:
-            large_pnt.X = vert_X
+    def visit_PartDocument(self, obj):
+        document = cast_to(obj, com.PartDocument)
+        print(document.DisplayName)
+        # print(doc.SubComponents)
+        for it in document.ComponentDefinition.Occurrences:
+            print("    ", it)
 
-        if vert_Y > large_pnt.Y:
-            large_pnt.Y = vert_Y
+    # def visit_part(self, obj):
+    #     pass
 
-        if vert_Z > large_pnt.Z:
-            large_pnt.Z = vert_Z
 
-    # Create and return a BoundingBox3D as the result
-    newBox = tg.CreateBox()
-    newBox.MinPoint = small_pnt
-    newBox.MaxPoint = large_pnt
-    return newBox
+class SurfaceBodyVisitor:
+    def traverse_assembly(self, assembly_document):
+        assembly_document = cast_to(assembly_document, com.AssemblyDocument)
+        self.traverse_occurrences(assembly_document.ComponentDefinition.Occurrences)
+
+    def traverse_occurrences(self, occurrences):
+        occurance: com.ComponentOccurrence
+        for occurance in occurrences:
+            if occurance.DefinitionDocumentType == const.kPartDocumentObject:
+                for body in occurance.SurfaceBodies:
+                    self.visit_surface_body(body)
+
+            self.traverse_occurrences(occurance.SubOccurrences)
+
+    def visit_surface_body(self, body: com.SurfaceBody):
+        pass
+
+
+_get_name_cache = {}
+
+
+def get_name(obj) -> str:
+    key = hash((69, id(obj)))
+    if key in _get_name_cache:
+        return _get_name_cache[key]
+
+    result = ""
+    if hasattr(obj, "Name"):
+        result = obj.Name
+    elif hasattr(obj, "DisplayName"):
+        result = obj.DisplayName
+    # elif not result:
+    #     result = "<Без Имени>"
+
+    if hasattr(obj, "Parent"):
+        parent_result = get_name(obj.Parent)
+        if parent_result and result:
+            parent_result += " : "
+        result = parent_result + result
+
+    _get_name_cache[key] = result
+    return result
+
+
+@dataclass
+class SurfaceBodySizeTaker(SurfaceBodyVisitor):
+    table: list[tuple[str, BodySize]] = field(default_factory=list)
+
+    def visit_surface_body(self, body: com.SurfaceBody):
+        self.table.append((get_name(body), get_body_size(body)))
+
+
+def dump_size_table_as_csv(table: list[tuple[str, BodySize]]) -> str:
+    result = ""
+    for name, size in table:
+        result += f"{name};" + ";".join(map(str, size)) + "\n"
+    return result
 
 
 inventor = Inventor.make(visible=True)
 print(f"Running {inventor.Caption}")
 
-file = Path(__file__).parent / "test" / ("part" + PartDocument.extention)
-document = PartDocument.open(inventor, file)
+file = Path(__file__).parent / "test" / "detail.iam"
+document = Document.open(inventor, file)
 
-body = inventor.CommandManager.Pick(const.kPartBodyFilter, "Выбери тело")
-print(body.Name)
+visitor = SurfaceBodySizeTaker()
+visitor.traverse_assembly(document)
 
-bnd_box = body.OrientedMinimumRangeBox
+# for it in visitor.table:
+#     print(it)
 
-# Draw the bounding box using a sketch.
-sk = Sketch3D.make(document)
-lines = sk.SketchLines3D
+Path("table.csv").write_text(dump_size_table_as_csv(visitor.table), "utf-8")
 
-tg = inventor.TransientGeometry
+# referenced = document.ReferencedDocuments
+# for i in range(1, referenced.Count + 1):
+#     # doc = cast_to(referenced.Item(i), com.AssemblyDocument)
+#     doc = referenced.Item(i)
+#     print(doc, repr(doc), doc.DisplayName, dir(doc))
+#     # print(doc.SubComponents)
+#     # for it in doc.ComponentDefinition.Occurrences:
+#     #     print("    ", it.Name)
 
-center = bnd_box.CornerPoint
-p1 = tg.CreatePoint(
-    center.X + bnd_box.DirectionOne.X,
-    center.Y + bnd_box.DirectionOne.Y,
-    center.Z + bnd_box.DirectionOne.Z,
-)
-p2 = tg.CreatePoint(
-    center.X + bnd_box.DirectionTwo.X,
-    center.Y + bnd_box.DirectionTwo.Y,
-    center.Z + bnd_box.DirectionTwo.Z,
-)
-p3 = tg.CreatePoint(
-    center.X + bnd_box.DirectionThree.X,
-    center.Y + bnd_box.DirectionThree.Y,
-    center.Z + bnd_box.DirectionThree.Z,
-)
-
-lines.AddByTwoPoints(center, p1)
-lines.AddByTwoPoints(center, p2)
-lines.AddByTwoPoints(center, p3)
+# body = inventor.CommandManager.Pick(const.kPartBodyFilter, "Выбери тело")
+# print(body.Name)

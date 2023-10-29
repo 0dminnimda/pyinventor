@@ -156,3 +156,6 @@ test
 
 # inventor file backups
 OldVersions
+
+# generated data
+table.csv
