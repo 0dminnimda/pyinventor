@@ -72,6 +72,21 @@ class Inventor(com.Application, COMBase):
         inventor.Visible = visible
         return inventor
 
+    # import traceback
+    # from contextlib import contextmanager
+    # @classmethod
+    # @contextmanager
+    # def open(cls, visible: bool = False):
+    #     ui = None
+    #     try:
+    #         inventor = cls.make(visible=visible)
+    #         # ui = inventor.UserInterfaceManager
+    #         yield inventor
+    #     except Exception:
+    #         # if ui:
+    #         #     ui.messageBox(f"Failed:\n{traceback.format_exc()}")
+    #         raise
+
 
 class WorkPlane(COMBase):
     @classmethod
