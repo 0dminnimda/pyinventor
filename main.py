@@ -37,14 +37,14 @@ doc = inventor.Documents.Add(kDrawingDocumentObject, templatePath, CreateVisible
 inventor = Inventor.make(visible=True)
 print(f"Running {inventor.Caption}")
 
-image_path = Path(__file__).parent / "sample.png"
+image_path = Path(__file__).parent / "test" / "sample.png"
 
-file = Path().cwd() / ("TestDrawing" + DrawingDocument.extention)
+file = Path(__file__).parent / "test" / ("TestDrawing" + DrawingDocument.extention)
 document = DrawingDocument.open(inventor, file)
 
 add_file(document, image_path)
 
-file = Path().cwd() / ("TestPart" + PartDocument.extention)
+file = Path(__file__).parent / "test" / ("TestPart" + PartDocument.extention)
 document = PartDocument.open(inventor, file)
 
 
