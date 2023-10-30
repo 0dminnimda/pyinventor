@@ -111,3 +111,4 @@ visitor = SurfaceBodySizeTaker()
 visitor.traverse_assembly(document)
 
 Path("table.csv").write_text(dump_size_table_as_csv(visitor.table), "utf-8")
+print("Работа завершена")
