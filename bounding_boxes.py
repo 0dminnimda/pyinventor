@@ -41,32 +41,6 @@ def get_body_size(body: com.SurfaceBody) -> BodySize:
     ))
 
 
-class PartVisitor:
-    def visit(self, obj):
-        if obj.DocumentType == const.kAssemblyDocumentObject:
-            self.visit_AssemblyDocument(obj)
-        elif obj.DocumentType == const.kPartDocumentObject:
-            self.visit_PartDocument(obj)
-        else:
-            raise Exception(f"Unsupported document type {obj.File.FullFileName}")
-
-    def visit_AssemblyDocument(self, obj):
-        document = cast_to(obj, com.AssemblyDocument)
-
-        referenced = document.ReferencedDocuments
-        for i in range(1, referenced.Count + 1):
-            self.visit(referenced.Item(i))
-
-    def visit_PartDocument(self, obj):
-        document = cast_to(obj, com.PartDocument)
-        print(document.DisplayName)
-        # print(doc.SubComponents)
-        for it in document.ComponentDefinition.Occurrences:
-            print("    ", it)
-
-    # def visit_part(self, obj):
-    #     pass
-
 
 class SurfaceBodyVisitor:
     def traverse_assembly(self, assembly_document):
@@ -130,25 +104,10 @@ def dump_size_table_as_csv(table: list[tuple[str, BodySize]]) -> str:
 inventor = Inventor.make(visible=True)
 print(f"Running {inventor.Caption}")
 
-file = Path(__file__).parent / "test" / "detail.iam"
-document = Document.open(inventor, file)
+document = inventor.ActiveDocument
+print(document.DisplayName)
 
 visitor = SurfaceBodySizeTaker()
 visitor.traverse_assembly(document)
 
-# for it in visitor.table:
-#     print(it)
-
 Path("table.csv").write_text(dump_size_table_as_csv(visitor.table), "utf-8")
-
-# referenced = document.ReferencedDocuments
-# for i in range(1, referenced.Count + 1):
-#     # doc = cast_to(referenced.Item(i), com.AssemblyDocument)
-#     doc = referenced.Item(i)
-#     print(doc, repr(doc), doc.DisplayName, dir(doc))
-#     # print(doc.SubComponents)
-#     # for it in doc.ComponentDefinition.Occurrences:
-#     #     print("    ", it.Name)
-
-# body = inventor.CommandManager.Pick(const.kPartBodyFilter, "Выбери тело")
-# print(body.Name)
